@@ -1,7 +1,7 @@
 package usersdto
 
 type CreateUserRequest struct {
-	FullName string `json:"fullName" form:"name" validate:"required"`
+	FullName string `json:"fullName" form:"fullName" validate:"required"`
 	Email    string `json:"email" form:"email" validate:"required"`
 	Password string `json:"password" form:"password" validate:"required"`
 	Phone    string `json:"phone" form:"phone" validate:"required"`
