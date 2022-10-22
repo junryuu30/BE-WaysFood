@@ -1,23 +1,28 @@
 package models
 
 type User struct {
-	ID        int    `json:"id"`
-	Fullname  string `json:"fullname" gorm:"type: varchar(255)"`
-	Email     string `json:"email" gorm:"type: varchar(255)"`
-	Phone     string `json:"phone" gorm:"type: varchar(255)"`
-	Location  string `json:"location" gorm:"type: varchar(255)"`
-	Image     string `json:"image" gorm:"type: varchar(255)"`
-	Role      string `json:"role" gorm:"type: varchar(255)"`
-	Product   string `json:"product" gorm:"type: varchar(255)"`
-	CreatedAt string `json:"-"`
-	UpdatedAt string `json:"-"`
+	ID        int                   `json:"id"`
+	FullName  string                `json:"fullName" gorm:"type: varchar(255)"`
+	Email     string                `json:"email" gorm:"type: varchar(255)"`
+	Password  string                `json:"-" gorm:"type:varchar(255)"`
+	Gender    string                `json:"gender" gorm:"type:varchar(255)"`
+	Phone     string                `json:"phone" gorm:"type:varchar(255)"`
+	Role      string                `json:"role" gorm:"type:varchar(255)"`
+	Image     string                `json:"image" gorm:"type:varchar(255)"`
+	Location  string                `json:"location" gorm:"type:varchar(255)"`
+	Products  []ProductUserResponse `json:"products"`
+	CreatedAt string                `json:"-"`
+	UpdatedAt string                `json:"-"`
 }
 
-// type UserProfileResponse struct {
-// 	ID   int    `json:"id"`
-// 	Name string `json:"name"`
-// }
+type UsersProfileResponse struct {
+	ID       int    `json:"id"`
+	FullName string `json:"fullName"`
+	Email    string `json:"email"`
+	Phone    string `json:"phone"`
+	Location string `json:"location"`
+}
 
-// func (UserProfileResponse) TableName() string {
-// 	return "users"
-// }
+func (UsersProfileResponse) TableName() string {
+	return "users"
+}

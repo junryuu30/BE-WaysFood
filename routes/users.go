@@ -2,6 +2,7 @@ package routes
 
 import (
 	"waysfood/handlers"
+	"waysfood/pkg/middleware"
 	"waysfood/pkg/mysql"
 	"waysfood/repositories"
 
@@ -13,9 +14,9 @@ func UserRoutes(r *mux.Router) {
 
 	h := handlers.HandlerUser(userRepository)
 
-	r.HandleFunc("/users", h.FindUsers).Methods("GET")
+	r.HandleFunc("/users", middleware.Auth(h.FindUsers)).Methods("GET")
 	r.HandleFunc("/user/{id}", h.GetUser).Methods("GET")
-	r.HandleFunc("/user", h.CreateUser).Methods("POST")
-	r.HandleFunc("/user/{id}", h.UpdateUser).Methods("PATCH")
-	r.HandleFunc("/user/{id}", h.DeleteUser).Methods("DELETE")
+	r.HandleFunc("/user", middleware.UploadFile(h.CreateUser)).Methods("POST")
+	r.HandleFunc("/user/{id}", middleware.Auth(middleware.UploadFile(h.UpdateUser))).Methods("PATCH")
+	r.HandleFunc("/user/{id}", middleware.Auth(h.DeleteUser)).Methods("DELETE")
 }

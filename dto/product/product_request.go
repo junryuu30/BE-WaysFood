@@ -1,9 +1,16 @@
 package productdto
 
 type ProductRequest struct {
-	Name   string `json:"name" from:"name" gorm:"type: varchar(255)"`
-	Desc   string `json:"desc" gorm:"type:text" form:"desc"`
-	Price  int    `json:"price" from:"price" gorm:"type: int"`
+	Title  string `json:"title" form:"name" gorm:"type: varchar(255)" validate:"required"`
 	Image  string `json:"image" from:"image" gorm:"type: varchar(255)"`
-	UserID int    `json:"user_id" gorm:"type: int"`
+	Price  int    `json:"price" form:"name" gorm:"type: varchar(255)" validate:"required"`
+	Qty    int    `json:"qty" form:"qty" gorm:"type: int" validate:"required"`
+	UserID int    `json:"user_id"`
 }
+
+// type UpdateProductRequst struct {
+// 	Name  string `json:"name" form:"name" gorm:"type: varchar(255)"`
+// 	Desc  string `json:"desc" form:"desc" gorm:"type:varchar(255)"`
+// 	Price int    `json:"price" from:"price" gorm:"type: varchar(255)"`
+// 	Qty   int    `json:"qty" from:"qty" gorm:"type: int"`
+// }

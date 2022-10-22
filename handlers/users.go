@@ -3,10 +3,12 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"strconv"
 	dto "waysfood/dto/result"
 	usersdto "waysfood/dto/users"
 	"waysfood/models"
+	"waysfood/pkg/mysql/bcrypt"
 	"waysfood/repositories"
 
 	"github.com/go-playground/validator/v10"
@@ -31,6 +33,12 @@ func (h *handlerUser) FindUsers(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		response := dto.ErrorResult{Code: http.StatusBadRequest, Message: err.Error()}
 		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	// loop for image
+	for i, p := range users {
+		users[i].Image = os.Getenv("PATH_FILE") + p.Image
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -52,9 +60,12 @@ func (h *handlerUser) GetUser(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
+	// for image
+	user.Image = os.Getenv("PATH_FILE") + user.Image
 
 	w.WriteHeader(http.StatusOK)
-	response := dto.SuccessResult{Code: http.StatusOK, Data: convertResponse(user)}
+	// response := dto.SuccessResult{Code: "success", Data: user}
+	response := dto.SuccessResult{Code: http.StatusOK, Data: user}
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -63,12 +74,27 @@ func (h *handlerUser) GetUser(w http.ResponseWriter, r *http.Request) {
 func (h *handlerUser) CreateUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	request := new(usersdto.CreateUserRequest)
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		response := dto.ErrorResult{Code: http.StatusBadRequest, Message: err.Error()}
-		json.NewEncoder(w).Encode(response)
-		return
+	// for image
+	dataContex := r.Context().Value("dataFile")
+	filename := dataContex.(string)
+
+	// request := new(usersdto.CreateUserRequest)
+	// if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	response := dto.ErrorResult{Code: http.StatusBadRequest, Message: err.Error()}
+	// 	json.NewEncoder(w).Encode(response)
+	// 	return
+	// }
+
+	request := usersdto.CreateUserRequest{
+		FullName: r.FormValue("fullName"),
+		Email:    r.FormValue("email"),
+		Phone:    r.FormValue("phone"),
+		Location: r.FormValue("location"),
+		Image:    r.FormValue("Image"),
+		Password: r.FormValue("password"),
+		Gender:   r.FormValue("gender"),
+		Role:     r.FormValue("role"),
 	}
 
 	validation := validator.New()
@@ -80,22 +106,36 @@ func (h *handlerUser) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// for bcrypt password
+	password, err := bcrypt.HashingPassword(request.Password)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		response := dto.ErrorResult{Code: http.StatusInternalServerError, Message: err.Error()}
+		json.NewEncoder(w).Encode(response)
+	}
+
 	// Dilihat di model yg dibuat
 	//  dan dto models
 	user := models.User{
-		Fullname: request.Fullname,
+		FullName: request.FullName,
 		Email:    request.Email,
+		Password: password,
 		Phone:    request.Phone,
+		Gender:   request.Gender,
 		Location: request.Location,
-		Image:    request.Image,
+		Image:    filename,
+		Role:     request.Role,
 	}
 
 	data, err := h.UserRepository.CreateUser(user)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		// response := dto.ErrorResult{Code: http.StatusInternalServerError, Message: err.Error()}
-		json.NewEncoder(w).Encode(err.Error())
+		response := dto.ErrorResult{Code: http.StatusInternalServerError, Message: err.Error()}
+		json.NewEncoder(w).Encode(response)
 	}
+
+	user, _ = h.UserRepository.GetUser(user.ID)
 
 	w.WriteHeader(http.StatusOK)
 	response := dto.SuccessResult{Code: http.StatusOK, Data: convertResponse(data)}
@@ -106,7 +146,27 @@ func (h *handlerUser) CreateUser(w http.ResponseWriter, r *http.Request) {
 func (h *handlerUser) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	request := new(usersdto.UpdateUserRequest) //take pattern data submission
+	dataContex := r.Context().Value("dataFile")
+	filename := dataContex.(string)
+
+	//take pattern data submission
+	// request := new(usersdto.UpdateUserRequest)
+
+	request := usersdto.UpdateUserRequest{
+		FullName: r.FormValue("fullName"),
+		Email:    r.FormValue("email"),
+		Password: r.FormValue("password"),
+		Phone:    r.FormValue("phone"),
+		Gender:   r.FormValue("gender"),
+		Location: r.FormValue("location"),
+		Image:    filename,
+		Role:     r.FormValue("role"),
+	}
+
+	id, _ := strconv.Atoi(mux.Vars(r)["id"])
+	// user := models.User{}
+	user, err := h.UserRepository.GetUser(int(id))
+
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		response := dto.ErrorResult{Code: http.StatusBadRequest, Message: err.Error()}
@@ -114,26 +174,31 @@ func (h *handlerUser) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, _ := strconv.Atoi(mux.Vars(r)["id"])
-	// user := models.User{}
-	user, err := h.UserRepository.GetUser(int(id))
+	password, err := bcrypt.HashingPassword(request.Password)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		response := dto.ErrorResult{Code: http.StatusBadRequest, Message: err.Error()}
+		w.WriteHeader(http.StatusInternalServerError)
+		response := dto.ErrorResult{Code: http.StatusInternalServerError, Message: err.Error()}
 		json.NewEncoder(w).Encode(response)
-		return
 	}
 
-	if request.Fullname != "" {
-		user.Fullname = request.Fullname
+	if request.FullName != "" {
+		user.FullName = request.FullName
 	}
 
 	if request.Email != "" {
 		user.Email = request.Email
 	}
 
+	if request.Password != "" {
+		user.Password = password
+	}
+
 	if request.Phone != "" {
 		user.Phone = request.Phone
+	}
+
+	if request.Gender != "" {
+		user.Gender = request.Gender
 	}
 
 	if request.Location != "" {
@@ -144,6 +209,10 @@ func (h *handlerUser) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		user.Image = request.Image
 	}
 
+	if request.Role != "" {
+		user.Role = request.Role
+	}
+
 	data, err := h.UserRepository.UpdateUser(user)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -151,6 +220,7 @@ func (h *handlerUser) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
+	user, _ = h.UserRepository.GetUser(user.ID)
 
 	w.WriteHeader(http.StatusOK)
 	response := dto.SuccessResult{Code: http.StatusOK, Data: convertResponse(data)}
@@ -187,10 +257,13 @@ func (h *handlerUser) DeleteUser(w http.ResponseWriter, r *http.Request) {
 func convertResponse(u models.User) usersdto.UserResponse {
 	return usersdto.UserResponse{
 		ID:       u.ID,
-		Fullname: u.Fullname,
+		Fullname: u.FullName,
 		Email:    u.Email,
+		Password: u.Password,
 		Phone:    u.Phone,
 		Location: u.Location,
 		Image:    u.Image,
+		Role:     u.Role,
+		Gender:   u.Gender,
 	}
 }
